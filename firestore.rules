@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Profile Validation
+    function isValidUserProfile(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.role in ['rider', 'driver', 'both'];
+    }
+
+    // Ride Validation
+    function isValidRide(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.riderId is string && data.riderId.size() <= 128 &&
+             data.status in ['requested', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled'] &&
+             data.fareEgp is number && data.fareEgp >= 0;
+    }
+
+    // Captain Application Validation
+    function isValidCaptainApplication(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.fullName is string && data.fullName.size() <= 128 &&
+             data.status in ['pending', 'approved', 'rejected'];
+    }
+
+    // /users/{userId}
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || resource.data.role == 'driver');
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUserProfile(incoming()) && incoming().uid == request.auth.uid;
+      allow update: if isOwner(userId) && isValidUserProfile(incoming()) && incoming().uid == existing().uid;
+      allow delete: if false;
+    }
+
+    // /rides/{rideId}
+    match /rides/{rideId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidRide(incoming()) && incoming().riderId == request.auth.uid;
+      allow update: if isSignedIn() && isValidRide(incoming()) && (
+        resource.data.riderId == request.auth.uid ||
+        resource.data.driverId == request.auth.uid ||
+        incoming().driverId == request.auth.uid
+      );
+      allow delete: if isSignedIn() && resource.data.riderId == request.auth.uid && resource.data.status == 'requested';
+    }
+
+    // Captain Location Telemetry Validation
+    function isValidCaptainLocation(data) {
+      return data.captainId is string && data.captainId.size() <= 128 &&
+             data.latitude is number &&
+             data.longitude is number &&
+             data.isAvailable is bool;
+    }
+
+    // /captain_applications/{appId}
+    match /captain_applications/{appId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidCaptainApplication(incoming()) && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && isValidCaptainApplication(incoming()) && resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // /captain_locations/{captainId}
+    match /captain_locations/{captainId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create, update: if isSignedIn() && (request.auth.uid == captainId || captainId == 'current_user_driver') && isValidCaptainLocation(incoming());
+      allow delete: if isSignedIn() && (request.auth.uid == captainId || captainId == 'current_user_driver');
+    }
+  }
+}

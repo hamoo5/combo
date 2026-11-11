@@ -1,0 +1,44 @@
+{
+  "name": "MasarX | مسار إكس - منصة المشاوير الذكية 0% عمولة",
+  "short_name": "MasarX",
+  "description": "تطبيق توصيل ركاب ثوري بنظام 0% عمولة على الرحلات واشتراك ثابت للكابتن مع رادار حي وتتبع أمان فوري",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' width='192' height='192'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310B981'/%3E%3Cstop offset='100%25' stop-color='%230F172A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='192' height='192' rx='42' fill='%230F172A'/%3E%3Ccircle cx='96' cy='96' r='64' fill='none' stroke='url(%23grad)' stroke-width='10' stroke-dasharray='12 8'/%3E%3Cpath d='M60 120 L96 60 L132 120 L108 120 L96 95 L84 120 Z' fill='%2310B981'/%3E%3Ccircle cx='96' cy='96' r='8' fill='%23F59E0B'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='512' height='512'%3E%3Cdefs%3E%3ClinearGradient id='grad512' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310B981'/%3E%3Cstop offset='50%25' stop-color='%23047857'/%3E%3Cstop offset='100%25' stop-color='%230F172A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='110' fill='%230F172A'/%3E%3Ccircle cx='256' cy='256' r='180' fill='none' stroke='url(%23grad512)' stroke-width='24' stroke-dasharray='30 20'/%3E%3Cpath d='M160 330 L256 160 L352 330 L290 330 L256 265 L222 330 Z' fill='%2310B981'/%3E%3Ccircle cx='256' cy='256' r='20' fill='%23F59E0B'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "navigation", "transportation"],
+  "shortcuts": [
+    {
+      "name": "طلب رحلة جديدة",
+      "short_name": "مشوار جديد",
+      "description": "افتح التطبيق واطلب كابتن فوراً",
+      "url": "/?role=rider",
+      "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='20' fill='%2310B981'/%3E%3C/svg%3E", "sizes": "48x48" }]
+    },
+    {
+      "name": "بوابة الكابتن 0% عمولة",
+      "short_name": "الكابتن",
+      "description": "سجل الدخول وابدأ قبول المشاوير",
+      "url": "/?role=captain",
+      "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='20' fill='%23F59E0B'/%3E%3C/svg%3E", "sizes": "48x48" }]
+    }
+  ]
+}

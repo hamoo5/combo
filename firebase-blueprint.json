@@ -1,0 +1,100 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Represents an authenticated rider or captain on the Wasla platform.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "role": { "type": "string", "enum": ["rider", "driver", "both"] },
+        "captainStatus": { "type": "string", "enum": ["not_registered", "pending", "approved"] },
+        "walletBalanceEgp": { "type": "number" },
+        "totalTripsCount": { "type": "number" },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Ride": {
+      "title": "Ride",
+      "description": "A booking or en-route trip request on the Wasla shuttle / indrive network.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "riderId": { "type": "string", "maxLength": 128 },
+        "riderName": { "type": "string", "maxLength": 128 },
+        "driverId": { "type": "string", "maxLength": 128 },
+        "driverName": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["requested", "accepted", "arrived", "in_progress", "completed", "cancelled"] },
+        "category": { "type": "string", "enum": ["comfort", "saver", "women_only", "shuttle"] },
+        "fareEgp": { "type": "number" },
+        "otpCode": { "type": "string", "maxLength": 8 },
+        "pickupName": { "type": "string", "maxLength": 256 },
+        "destinationName": { "type": "string", "maxLength": 256 },
+        "passengerCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "riderId", "status", "fareEgp"]
+    },
+    "CaptainApplication": {
+      "title": "CaptainApplication",
+      "description": "Verification submission for prospective Wasla captains.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "fullName": { "type": "string", "maxLength": 128 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "nationalId": { "type": "string", "maxLength": 32 },
+        "licenseNumber": { "type": "string", "maxLength": 32 },
+        "carMake": { "type": "string", "maxLength": 64 },
+        "carModel": { "type": "string", "maxLength": 64 },
+        "carPlate": { "type": "string", "maxLength": 32 },
+        "carColor": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "fullName", "phone", "status"]
+    },
+    "CaptainLocation": {
+      "title": "CaptainLocation",
+      "description": "Real-time geolocation telemetry for active captains updating every 5 seconds.",
+      "type": "object",
+      "properties": {
+        "captainId": { "type": "string", "maxLength": 128 },
+        "captainName": { "type": "string", "maxLength": 128 },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "accuracy": { "type": "number" },
+        "heading": { "type": "number" },
+        "speed": { "type": "number" },
+        "isAvailable": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["captainId", "latitude", "longitude", "isAvailable", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores individual user profile and preference records."
+    },
+    "/rides/{rideId}": {
+      "schema": "Ride",
+      "description": "Active and past rides across the platform."
+    },
+    "/captain_applications/{appId}": {
+      "schema": "CaptainApplication",
+      "description": "Onboarding verification applications for captains."
+    },
+    "/captain_locations/{captainId}": {
+      "schema": "CaptainLocation",
+      "description": "Real-time captain GPS updates every 5 seconds while available."
+    }
+  }
+}

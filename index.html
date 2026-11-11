@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>MasarX | مسار إكس - منصة المشاوير الذكية 0% عمولة</title>
+  <meta name="description" content="تطبيق توصيل ركاب ثوري بنظام 0% عمولة على الرحلات واشتراك ثابت للكابتن، رادار حي للمركبات، وتتبع أمان SOS." />
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0F172A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MasarX" />
+
+  <!-- Google Fonts: Cairo & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS for 100% Free Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            indigoTheme: {
+              950: '#070B14',
+              900: '#0F172A',
+              800: '#1E293B',
+              700: '#334155',
+            },
+            emeraldAccent: {
+              400: '#34D399',
+              500: '#10B981',
+              600: '#059669',
+            },
+            goldAccent: {
+              400: '#FBBF24',
+              500: '#F59E0B',
+              600: '#D97706',
+            }
+          },
+          fontFamily: {
+            sans: ['Cairo', 'Plus Jakarta Sans', 'sans-serif'],
+          },
+          boxShadow: {
+            'glow-emerald': '0 0 20px -2px rgba(16, 185, 129, 0.45)',
+            'glow-gold': '0 0 20px -2px rgba(245, 158, 11, 0.45)',
+            'glow-sos': '0 0 30px 4px rgba(239, 68, 68, 0.65)',
+            'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.45)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Leaflet Heatmap Plugin CDN -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* Mobile-first Native Feel */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      box-sizing: border-box;
+    }
+    input, textarea {
+      user-select: text;
+    }
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .light .glass-card {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+    .glass-elevated {
+      background: rgba(30, 41, 59, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .light .glass-elevated {
+      background: rgba(248, 250, 252, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    /* Radar pulsing ring effect */
+    @keyframes radarPulse {
+      0% { transform: scale(0.6); opacity: 0.9; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+    .radar-beacon {
+      position: relative;
+    }
+    .radar-beacon::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 2px solid #10B981;
+      animation: radarPulse 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    /* Clean attribution */
+    .leaflet-control-attribution {
+      font-size: 8px !important;
+      opacity: 0.35 !important;
+      background: rgba(15, 23, 42, 0.7) !important;
+      color: #94a3b8 !important;
+      border-radius: 4px;
+      padding: 1px 4px !important;
+    }
+    /* OpenStreetMap Tiles Dark Mode Styling - Crystal clear without any API key watermark */
+    .dark .leaflet-tile {
+      filter: brightness(0.72) invert(1) contrast(2.4) hue-rotate(200deg) saturate(0.3) brightness(0.9);
+    }
+    .light .leaflet-tile {
+      filter: saturate(1.1) contrast(1.02);
+    }
+    /* Smooth transitions */
+    .smooth-transition {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* Hide Scrollbar */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-indigoTheme-950 text-slate-100 antialiased h-screen w-screen overflow-hidden font-sans flex flex-col transition-colors duration-500">
+
+  <!-- ============================================== -->
+  <!-- 1. TOP MOBILE HEADER BAR -->
+  <!-- ============================================== -->
+  <header class="fixed top-0 inset-x-0 z-40 px-3 py-2 glass-card shadow-glass flex items-center justify-between gap-2 border-b border-white/5">
+    
+    <!-- Logo & 0% Badge -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emeraldAccent-500 to-indigoTheme-900 flex items-center justify-center shadow-glow-emerald border border-emeraldAccent-400/30">
+        <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 19 21 12 17 5 21 12 2"></polygon></svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-1 leading-none">
+          <span class="font-black text-sm tracking-tight text-white">مسار<span class="text-emeraldAccent-400">X</span></span>
+          <span class="bg-goldAccent-500/20 text-goldAccent-400 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-goldAccent-500/30">0% عمولة</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role Switcher Segmented Pills (Rider, Captain, Admin) -->
+    <div class="bg-indigoTheme-900/90 p-0.5 rounded-xl flex items-center border border-white/10 text-xs font-semibold">
+      <button id="tabRider" onclick="switchRole('rider')" class="px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all text-white bg-emeraldAccent-600 shadow-glow-emerald font-bold">
+        <span>🚖</span>
+        <span>الراكب</span>
+      </button>
+      <button id="tabCaptain" onclick="switchRole('captain')" class="px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all text-slate-400 hover:text-white">
+        <span>🚗</span>
+        <span>الكابتن</span>
+      </button>
+      <button id="tabAdmin" onclick="openAdminModal()" class="px-2 py-1 rounded-lg flex items-center gap-0.5 transition-all text-slate-400 hover:text-goldAccent-400" title="لوحة الإدارة">
+        <span>🛡️</span>
+      </button>
+    </div>
+
+    <!-- Quick Utilities (Theme & Supabase Config) -->
+    <div class="flex items-center gap-1 shrink-0">
+      <button id="themeToggleBtn" onclick="toggleThemeManual()" title="تبديل الوضع الليلي / النهاري" class="w-7 h-7 rounded-lg bg-indigoTheme-800 text-goldAccent-400 flex items-center justify-center border border-white/5 text-xs">
+        <span id="themeIcon">🌙</span>
+      </button>
+      <button onclick="openSupabaseModal()" title="إعدادات Supabase" class="w-7 h-7 rounded-lg bg-indigoTheme-800 text-emeraldAccent-400 flex items-center justify-center border border-white/5 text-xs">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============================================== -->
+  <!-- 2. FULLSCREEN LIVE MAP VIEWPORT (TOP 55%+ CLEAR) -->
+  <!-- ============================================== -->
+  <main class="relative flex-1 w-full h-full pt-12">
+    <!-- Map Container (Takes full screen behind bottom sheet) -->
+    <div id="map" class="w-full h-full z-0"></div>
+
+    <!-- Floating Live Radar Status Pill (Cairo & GPS) -->
+    <div id="radarBadge" class="absolute top-14 left-1/2 -translate-x-1/2 z-20 glass-card px-3 py-1 rounded-full border border-emeraldAccent-500/30 flex items-center gap-1.5 shadow-lg">
+      <span class="w-2 h-2 rounded-full bg-emeraldAccent-400 radar-beacon"></span>
+      <span id="radarText" class="text-[11px] font-bold text-emeraldAccent-300">رادار الكباتن نشط: 5 مركبات تتحرك في محيطك</span>
+    </div>
+
+    <!-- Map Floating Controls (Recenter, Heatmap Toggle, Sound) -->
+    <div class="absolute top-24 left-3 z-20 flex flex-col gap-1.5">
+      <button onclick="fetchRealUserGPS(true)" title="موقعي الفعلي (GPS الهاتف)" class="w-9 h-9 rounded-xl glass-card text-emeraldAccent-400 hover:text-white flex items-center justify-center shadow-lg border border-white/10 active:scale-95 transition-transform">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
+      </button>
+      <button onclick="toggleHeatmap()" id="heatmapToggleBtn" title="الخريطة الحرارية للطلب" class="w-9 h-9 rounded-xl glass-card text-goldAccent-400 hover:text-white flex items-center justify-center shadow-lg border border-white/10 active:scale-95 transition-transform relative">
+        <span class="text-sm">🔥</span>
+        <span id="heatStatusDot" class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emeraldAccent-400"></span>
+      </button>
+      <button onclick="toggleSound()" id="soundToggleBtn" title="تفعيل/كتم الصوت" class="w-9 h-9 rounded-xl glass-card text-slate-300 hover:text-white flex items-center justify-center shadow-lg border border-white/10 active:scale-95 transition-transform">
+        <svg id="soundIconOn" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+      </button>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- 3. MOBILE BOTTOM SHEET (CAPPED AT 45% MAX HEIGHT) -->
+    <!-- ============================================== -->
+    <div id="bottomSheet" class="absolute bottom-0 inset-x-0 z-30 glass-card rounded-t-3xl border-t border-white/10 shadow-2xl max-h-[45vh] flex flex-col transition-all duration-300">
+      
+      <!-- Drag Handle & Collapse Toggle -->
+      <div id="sheetHandle" onclick="toggleSheetCollapse()" class="w-full pt-2 pb-1 flex flex-col items-center cursor-pointer">
+        <div class="w-10 h-1.5 rounded-full bg-slate-500/80 hover:bg-slate-400 transition-colors"></div>
+      </div>
+
+      <!-- Sheet Scrollable Area (Leaves bottom space for sticky button) -->
+      <div id="sheetContentScroll" class="px-3.5 pb-2 overflow-y-auto max-h-[35vh] no-scrollbar space-y-2">
+        
+        <!-- ============================================== -->
+        <!-- VIEW 1: RIDER INTERFACE (الراكب) -->
+        <!-- ============================================== -->
+        <div id="riderView">
+          
+          <!-- STAGE 1: DEFAULT COMPACT PEEK STATE (Cairo Landmarks) -->
+          <div id="riderExploreState" class="space-y-2">
+            <!-- Search Destination Bar -->
+            <div onclick="expandRiderBooking()" class="p-2.5 rounded-2xl bg-indigoTheme-900/90 border border-white/10 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-goldAccent-500/20 text-goldAccent-400 flex items-center justify-center font-bold text-sm">
+                  🔍
+                </div>
+                <div>
+                  <span class="text-xs font-bold text-white block">إلى أين تريد الذهاب؟</span>
+                  <span class="text-[10px] text-emeraldAccent-400 block">سعر عادل ثابت مقدماً ⚡ 0% زيادة Surge</span>
+                </div>
+              </div>
+              <span class="px-2 py-1 rounded-lg bg-emeraldAccent-600/30 text-emeraldAccent-300 text-[10px] font-bold">
+                تحديد الرحلة
+              </span>
+            </div>
+
+            <!-- Cairo Quick Destination Chips -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+              <span class="text-slate-400 whitespace-nowrap text-[10px] font-medium">وجهات القاهرة:</span>
+              <button onclick="selectQuickDestination('مطار القاهرة الدولي، صالة 3', 30.1219, 31.4056)" class="px-2.5 py-1 rounded-full bg-indigoTheme-900/80 hover:bg-emeraldAccent-600 hover:text-white text-slate-200 border border-white/10 whitespace-nowrap text-[11px] font-medium transition-all">✈️ مطار القاهرة</button>
+              <button onclick="selectQuickDestination('التجمع الخامس، كايرو فستيفال سيتي', 30.0310, 31.4065)" class="px-2.5 py-1 rounded-full bg-indigoTheme-900/80 hover:bg-emeraldAccent-600 hover:text-white text-slate-200 border border-white/10 whitespace-nowrap text-[11px] font-medium transition-all">🏙️ التجمع / CFC</button>
+              <button onclick="selectQuickDestination('ميدان التحرير، وسط البلد', 30.0444, 31.2357)" class="px-2.5 py-1 rounded-full bg-indigoTheme-900/80 hover:bg-emeraldAccent-600 hover:text-white text-slate-200 border border-white/10 whitespace-nowrap text-[11px] font-medium transition-all">🏛️ وسط البلد</button>
+              <button onclick="selectQuickDestination('الشيخ زايد، مول العرب', 30.0074, 30.9733)" class="px-2.5 py-1 rounded-full bg-indigoTheme-900/80 hover:bg-emeraldAccent-600 hover:text-white text-slate-200 border border-white/10 whitespace-nowrap text-[11px] font-medium transition-all">🎡 الشيخ زايد</button>
+              <button onclick="selectQuickDestination('المعادي، كورنيش النيل', 29.9592, 31.2592)" class="px-2.5 py-1 rounded-full bg-indigoTheme-900/80 hover:bg-emeraldAccent-600 hover:text-white text-slate-200 border border-white/10 whitespace-nowrap text-[11px] font-medium transition-all">🌆 المعادي</button>
+            </div>
+          </div>
+
+          <!-- STAGE 2: EXPANDED FARES & BOOKING STATE (Cairo & EGP) -->
+          <div id="riderBookingState" class="hidden space-y-2">
+            
+            <!-- Route Header & Minimize Button -->
+            <div class="flex items-center justify-between pb-1 border-b border-white/10 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="font-extrabold text-white text-xs" id="routeSummaryShort">16.4 كم • 22 دقيقة</span>
+                <span class="text-[9px] bg-emeraldAccent-500/20 text-emeraldAccent-300 px-1.5 py-0.5 rounded font-bold">0% عمولة</span>
+              </div>
+              <button onclick="minimizeRiderBooking()" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-0.5 font-semibold">
+                <span>🗺️ تصغير للخريطة</span>
+                <span>▼</span>
+              </button>
+            </div>
+
+            <!-- Route Inputs (Pickup & Dropoff) with Search & Map Pin Pickers -->
+            <div class="glass-elevated p-2 rounded-xl space-y-1.5 text-xs">
+              <!-- Pickup Input -->
+              <div class="flex items-center gap-1 bg-indigoTheme-950/70 rounded-xl p-1.5 border border-white/5">
+                <span class="w-2.5 h-2.5 rounded-full bg-emeraldAccent-400 shrink-0"></span>
+                <div class="flex-1 min-w-0 cursor-pointer" onclick="openSearchOverlay('pickup')">
+                  <span class="block text-[8px] text-slate-400 font-medium leading-none mb-0.5">مكان الانطلاق (اضغط للبحث)</span>
+                  <input type="text" id="pickupInput" readonly value="موقعي الحالي (ميدان التحرير، القاهرة)" class="w-full bg-transparent text-[11px] text-white font-semibold focus:outline-none cursor-pointer truncate" placeholder="مكان الانطلاق" />
+                </div>
+                <button type="button" onclick="fetchRealUserGPS(true)" class="px-1.5 py-1 rounded-lg bg-emeraldAccent-600/30 hover:bg-emeraldAccent-600/50 text-emeraldAccent-300 border border-emeraldAccent-500/30 text-[9px] font-bold shrink-0 flex items-center gap-0.5 active:scale-95 transition-all" title="تحديد موقعي الفعلي عبر GPS الهاتف">
+                  <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
+                  <span>موقعي 🎯</span>
+                </button>
+                <button type="button" onclick="openSearchOverlay('pickup')" class="p-1 rounded-lg bg-indigoTheme-800 text-slate-300 hover:text-emeraldAccent-400 shrink-0" title="بحث بالكتابة">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+                <button type="button" onclick="startCenterPinPicker('pickup')" class="px-2 py-1 bg-emeraldAccent-500/20 hover:bg-emeraldAccent-500/30 text-emeraldAccent-300 rounded-lg text-[9px] font-bold shrink-0 flex items-center gap-0.5 border border-emeraldAccent-500/30 active:scale-95 transition-all" title="تحديد بالدبوس على الخريطة">
+                  <span>📍 بالخريطة</span>
+                </button>
+              </div>
+
+              <!-- Dropoff Input -->
+              <div class="flex items-center gap-1.5 bg-indigoTheme-950/70 rounded-xl p-1.5 border border-white/5">
+                <span class="w-2.5 h-2.5 rounded-full bg-goldAccent-400 shrink-0"></span>
+                <div class="flex-1 min-w-0 cursor-pointer" onclick="openSearchOverlay('dropoff')">
+                  <span class="block text-[8px] text-slate-400 font-medium leading-none mb-0.5">الوجهة (اضغط للبحث)</span>
+                  <input type="text" id="dropoffInput" readonly value="مطار القاهرة الدولي، صالة 3" class="w-full bg-transparent text-[11px] text-white font-semibold focus:outline-none cursor-pointer truncate" placeholder="الوجهة" />
+                </div>
+                <button type="button" onclick="openSearchOverlay('dropoff')" class="p-1 rounded-lg bg-indigoTheme-800 text-slate-300 hover:text-goldAccent-400 shrink-0" title="بحث بالكتابة">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+                <button type="button" onclick="startCenterPinPicker('dropoff')" class="px-2 py-1 bg-goldAccent-500/20 hover:bg-goldAccent-500/30 text-goldAccent-300 rounded-lg text-[9px] font-bold shrink-0 flex items-center gap-0.5 border border-goldAccent-500/30 active:scale-95 transition-all" title="تحديد بالدبوس على الخريطة">
+                  <span>📍 بالخريطة</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 3 Category Selection Cards (EGP Pricing) -->
+            <div class="grid grid-cols-3 gap-1.5">
+              <!-- Economy -->
+              <button type="button" onclick="selectCategory('economy')" id="catEconomy" class="p-1.5 rounded-xl border-2 border-emeraldAccent-500 bg-emeraldAccent-500/10 flex flex-col items-center text-center cursor-pointer">
+                <span class="text-sm">🚗</span>
+                <span class="text-[10px] font-bold text-white">اقتصادي</span>
+                <span id="fareEconomyText" class="text-[11px] font-black text-emeraldAccent-400 mt-0.5">85.00 ج.م</span>
+                <span class="text-[8px] text-slate-400">4 دقائق وصول</span>
+              </button>
+
+              <!-- Comfort -->
+              <button type="button" onclick="selectCategory('comfort')" id="catComfort" class="p-1.5 rounded-xl border border-white/10 bg-indigoTheme-900/40 hover:bg-indigoTheme-900/80 flex flex-col items-center text-center cursor-pointer">
+                <span class="text-sm">🚘</span>
+                <span class="text-[10px] font-bold text-white">مريح</span>
+                <span id="fareComfortText" class="text-[11px] font-black text-slate-300 mt-0.5">120.00 ج.م</span>
+                <span class="text-[8px] text-slate-400">6 دقائق وصول</span>
+              </button>
+
+              <!-- Family -->
+              <button type="button" onclick="selectCategory('family')" id="catFamily" class="p-1.5 rounded-xl border border-white/10 bg-indigoTheme-900/40 hover:bg-indigoTheme-900/80 flex flex-col items-center text-center cursor-pointer">
+                <span class="text-sm">🚐</span>
+                <span class="text-[10px] font-bold text-white">عائلي</span>
+                <span id="fareFamilyText" class="text-[11px] font-black text-slate-300 mt-0.5">155.00 ج.م</span>
+                <span class="text-[8px] text-slate-400">8 دقائق وصول</span>
+              </button>
+            </div>
+
+            <!-- Favorite Captain Switch (Compact) -->
+            <div class="px-2 py-1 bg-indigoTheme-900/50 rounded-lg border border-white/5 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="text-goldAccent-400 text-xs">⭐</span>
+                <span class="text-[10px] font-bold text-white">طلب كابتن مفضل أولاً</span>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="favoriteCaptainToggle" class="sr-only peer" onchange="toggleFavoriteMode(this.checked)">
+                <div class="w-7 h-3.5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-goldAccent-500"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- STAGE 3: ACTIVE RIDE IN-FLIGHT STATE (Live Tracking on Polyline) -->
+          <div id="riderActiveState" class="hidden space-y-2">
+            <!-- Status Pill & Live ETA / Distance Ticker -->
+            <div class="flex items-center justify-between pb-1 border-b border-white/10 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span id="riderStatusDot" class="w-2.5 h-2.5 rounded-full bg-emeraldAccent-400 animate-pulse"></span>
+                <span id="riderStatusHeading" class="font-black text-white text-[11px]">الكابتن في طريقه إليك</span>
+              </div>
+              <span id="riderEtaBadge" class="bg-emeraldAccent-500/20 text-emeraldAccent-300 px-2 py-0.5 rounded-full text-[10px] font-black border border-emeraldAccent-500/30">
+                وصول 4 د • 1.5 كم
+              </span>
+            </div>
+
+            <!-- Live Distance & Status Micro-Ticker -->
+            <div class="bg-indigoTheme-950/90 px-2.5 py-1.5 rounded-xl border border-emeraldAccent-500/20 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-1.5 truncate">
+                <span class="text-xs">🚗</span>
+                <span id="riderLiveTicker" class="text-[10px] font-bold text-emeraldAccent-300 truncate">تتبع مسار المركبة اللحظي في الشوارع...</span>
+              </div>
+              <span id="riderLiveSpeed" class="text-[9px] font-mono font-bold text-slate-400 shrink-0">42 كم/س</span>
+            </div>
+
+            <!-- Polyline Travel Progress Bar -->
+            <div class="w-full bg-indigoTheme-950 rounded-full h-1.5 overflow-hidden border border-white/5">
+              <div id="riderTripProgressBar" class="bg-gradient-to-r from-emeraldAccent-500 via-teal-400 to-goldAccent-400 h-full w-[15%] transition-all duration-500"></div>
+            </div>
+
+            <!-- Captain Card (Egyptian Captain Profile) -->
+            <div id="activeCaptainCard" class="glass-elevated p-2 rounded-xl space-y-1.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="relative">
+                    <img id="activeCaptainAvatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="Captain" class="w-9 h-9 rounded-xl object-cover border border-emeraldAccent-400" />
+                    <span class="absolute -bottom-1 -right-1 bg-goldAccent-500 text-indigoTheme-950 text-[7px] font-black px-1 rounded">★ 4.96</span>
+                  </div>
+                  <div>
+                    <h4 id="activeCaptainName" class="font-bold text-[11px] text-white">كابتن محمود حسن</h4>
+                    <p id="activeCaptainCar" class="text-[9px] text-slate-300">نيسان صني 2024 • فضي ميتاليك</p>
+                    <p id="activeCaptainPlate" class="text-[9px] font-mono font-bold text-goldAccent-400">ق هـ ر | 5821</p>
+                  </div>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                  <span class="bg-emeraldAccent-500/20 text-emeraldAccent-400 text-[8px] font-bold px-1.5 py-0.5 rounded-full">0% عمولة</span>
+                  <a id="captainCallBtn" href="tel:+201012345678" class="w-7 h-7 rounded-lg bg-indigoTheme-800 hover:bg-emeraldAccent-600 text-white flex items-center justify-center transition-all">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  </a>
+                </div>
+              </div>
+
+              <div class="bg-indigoTheme-950/70 p-1.5 rounded-lg flex items-center justify-between text-xs">
+                <span class="text-slate-400 text-[9px]">المبلغ الثابت المطلوب نقداً/فودافون كاش:</span>
+                <span id="activeTripFare" class="font-black text-goldAccent-400 text-xs">85.00 ج.م</span>
+              </div>
+            </div>
+
+            <!-- WhatsApp Live Share & Emergency SOS -->
+            <div class="grid grid-cols-2 gap-1.5">
+              <button onclick="shareTripViaWhatsApp()" class="py-1.5 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] flex items-center justify-center gap-1 active:scale-95 transition-all">
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67Z"/></svg>
+                <span>مشاركة بالواتساب</span>
+              </button>
+              <button onclick="triggerEmergencySOS()" class="py-1.5 px-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-[10px] flex items-center justify-center gap-1 shadow-glow-sos active:scale-95 transition-all">
+                <span>🚨 طوارئ SOS</span>
+              </button>
+            </div>
+
+            <!-- Progress simulation and cancel -->
+            <div class="flex items-center gap-1.5 pt-0.5">
+              <button onclick="simulateNextRideStep()" class="flex-1 py-1.5 px-2 rounded-xl bg-indigoTheme-800 text-slate-200 text-[10px] font-semibold transition-all">
+                محاكاة تقدم الرحلة ⏩
+              </button>
+              <button onclick="cancelCurrentRide()" class="py-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-red-950 text-slate-400 hover:text-red-400 text-[10px] font-semibold transition-all">
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- VIEW 2: CAPTAIN INTERFACE (الكابتن) -->
+        <!-- ============================================== -->
+        <div id="captainView" class="hidden space-y-2">
+          
+          <!-- Online/Offline Switch -->
+          <div class="glass-elevated p-2 rounded-xl flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div id="captainOnlineDot" class="w-2.5 h-2.5 rounded-full bg-emeraldAccent-400 radar-beacon"></div>
+              <div>
+                <span id="captainStatusText" class="text-xs font-bold text-white block">أنت متصل وجاهز للطلبات</span>
+                <span class="text-[9px] text-emeraldAccent-400 block font-semibold">0% عمولة: 100% من الأجرة لك</span>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="captainOnlineToggle" checked class="sr-only peer" onchange="toggleCaptainOnline(this.checked)">
+              <div class="w-9 h-4.5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emeraldAccent-500"></div>
+            </label>
+          </div>
+
+          <!-- Subscription & Smart Grace Mode (6 Hours) -->
+          <div id="graceModeCard" class="p-2 rounded-xl bg-gradient-to-br from-indigoTheme-900 to-indigoTheme-950 border border-emeraldAccent-500/30 space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-1.5">
+                <span>🛡️</span>
+                <span id="subscriptionStatusBadge" class="text-[9px] text-emeraldAccent-400 font-bold px-1.5 py-0.5 rounded-full bg-emeraldAccent-500/10 border border-emeraldAccent-500/30">
+                  اشتراك نشط (0% عمولة)
+                </span>
+              </div>
+              <span id="graceCountdownText" class="text-[10px] font-mono font-extrabold text-goldAccent-400">05:48:12 متبقية</span>
+            </div>
+
+            <div class="flex items-center justify-between pt-0.5 border-t border-white/5 text-xs">
+              <div>
+                <span class="text-slate-400 text-[9px]">أرباح اليوم:</span>
+                <span id="captainTodayEarnings" class="font-black text-emeraldAccent-400 mr-1 text-xs">485.00 ج.م</span>
+              </div>
+              <button onclick="openRenewModal()" class="px-2 py-0.5 rounded-lg bg-goldAccent-500 text-indigoTheme-950 text-[9px] font-black active:scale-95 transition-all">
+                تجديد الاشتراك
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Heatmap Hotspots Widget (Cairo Hotspots) -->
+          <div class="glass-elevated p-2 rounded-xl space-y-1 border border-goldAccent-500/20">
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-1">
+                <span class="text-sm">🔥</span>
+                <span class="font-bold text-white text-[10px]">بؤر الطلب الحية بالقاهرة (Heatmap)</span>
+              </div>
+              <button onclick="toggleHeatmap()" id="captainHeatToggleBtn" class="px-2 py-0.5 rounded-lg bg-goldAccent-500 text-indigoTheme-950 font-bold text-[9px] transition-all">
+                الحرارية مفعّلة
+              </button>
+            </div>
+
+            <div class="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs no-scrollbar">
+              <button onclick="focusHeatSpot('airport')" class="px-2 py-1 rounded-lg bg-indigoTheme-950/80 border border-amber-500/40 text-slate-200 whitespace-nowrap text-[9px] font-medium flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span>مطار القاهرة (110 طلب/س)</span>
+              </button>
+              <button onclick="focusHeatSpot('tagamoa')" class="px-2 py-1 rounded-lg bg-indigoTheme-950/80 border border-red-500/40 text-slate-200 whitespace-nowrap text-[9px] font-medium flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                <span>التجمع الخامس (85 طلب/س)</span>
+              </button>
+              <button onclick="focusHeatSpot('downtown')" class="px-2 py-1 rounded-lg bg-indigoTheme-950/80 border border-emeraldAccent-500/40 text-slate-200 whitespace-nowrap text-[9px] font-medium flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emeraldAccent-400"></span>
+                <span>وسط البلد (70 طلب/س)</span>
+              </button>
+              <button onclick="focusHeatSpot('zayed')" class="px-2 py-1 rounded-lg bg-indigoTheme-950/80 border border-purple-500/40 text-slate-200 whitespace-nowrap text-[9px] font-medium flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                <span>الشيخ زايد (65 طلب/س)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Incoming Ride Alert (Pre-acceptance with dual-route distances) -->
+          <div id="captainIncomingCard" class="hidden glass-elevated p-2.5 rounded-2xl space-y-2 border-2 border-emeraldAccent-400 shadow-glow-emerald">
+            <div class="flex items-center justify-between pb-1 border-b border-white/10">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-emeraldAccent-400 animate-ping"></span>
+                <div>
+                  <span class="text-xs font-black text-white block">طلب مشوار جديد (0% عمولة)</span>
+                  <span class="text-[9px] text-emeraldAccent-400 font-semibold">100% من الأجرة لك بدون خصم</span>
+                </div>
+              </div>
+              <div class="text-left">
+                <span id="incomingFareTag" class="text-sm font-black text-emeraldAccent-400 bg-emeraldAccent-500/20 px-2.5 py-0.5 rounded-lg border border-emeraldAccent-500/30 block">85.00 ج.م</span>
+                <span class="text-[8px] text-slate-400 block">صافي الأرباح</span>
+              </div>
+            </div>
+
+            <!-- Dual Distance & Time Indicator Pills -->
+            <div class="grid grid-cols-2 gap-1.5 text-center text-xs">
+              <div class="p-1.5 rounded-xl bg-sky-500/10 border border-sky-400/30">
+                <span class="text-[8px] text-sky-300 block font-bold flex items-center justify-center gap-1">
+                  <span class="w-2 h-0.5 border-t border-dashed border-sky-300 inline-block"></span>
+                  المسافة إليك (خط متقطع)
+                </span>
+                <span id="incomingCaptainToRiderDist" class="text-[11px] font-black text-white">1.5 كم • 4 دقائق</span>
+              </div>
+              <div class="p-1.5 rounded-xl bg-emeraldAccent-500/10 border border-emeraldAccent-400/30">
+                <span class="text-[8px] text-emeraldAccent-300 block font-bold flex items-center justify-center gap-1">
+                  <span class="w-2 h-0.5 bg-emeraldAccent-400 inline-block"></span>
+                  مسافة الرحلة (خط متصل)
+                </span>
+                <span id="incomingTripDist" class="text-[11px] font-black text-white">16.4 كم • 22 دقيقة</span>
+              </div>
+            </div>
+
+            <!-- Route Details -->
+            <div class="bg-indigoTheme-950/80 p-2 rounded-xl space-y-1 text-xs border border-white/5">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emeraldAccent-400 shrink-0"></span>
+                <div class="truncate">
+                  <span class="text-[8px] text-slate-400 block">نقطة الانطلاق (الراكب):</span>
+                  <span id="incomingPickupText" class="text-[10px] font-bold text-white truncate block">ميدان التحرير، وسط البلد</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 pt-0.5 border-t border-white/5">
+                <span class="w-2 h-2 rounded-full bg-goldAccent-400 shrink-0"></span>
+                <div class="truncate">
+                  <span class="text-[8px] text-slate-400 block">وجهة الوصول:</span>
+                  <span id="incomingDropoffText" class="text-[10px] font-bold text-white truncate block">مطار القاهرة الدولي، صالة 3</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-0.5">
+              <button onclick="captainAcceptRide()" class="py-2.5 rounded-xl bg-gradient-to-r from-emeraldAccent-500 to-emeraldAccent-600 hover:from-emeraldAccent-400 hover:to-emeraldAccent-500 text-white font-black text-xs shadow-glow-emerald active:scale-95 transition-all flex items-center justify-center gap-1">
+                <span>🚀 قبول (100% لك)</span>
+              </button>
+              <button onclick="captainDeclineRide()" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs active:scale-95 transition-all">
+                رفض / تخطي ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- Captain Active Trip Progress -->
+          <div id="captainActiveTripCard" class="hidden glass-elevated p-2 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between text-xs">
+              <span id="captainStepHeading" class="font-bold text-white">توجه إلى موقع الراكب</span>
+              <span id="captainTripFareTag" class="font-black text-goldAccent-400">85.00 ج.م</span>
+            </div>
+            <button onclick="captainAdvanceStage()" id="captainActionBtn" class="w-full py-2 rounded-xl bg-emeraldAccent-600 hover:bg-emeraldAccent-500 text-white font-extrabold text-xs shadow-glow-emerald active:scale-95 transition-all">
+              وصلت إلى موقع الراكب
+            </button>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- VIEW 3: ADMIN DASHBOARD (لوحة الإدارة) -->
+        <!-- ============================================== -->
+        <div id="adminView" class="hidden space-y-2">
+          <div class="flex items-center justify-between pb-1 border-b border-white/10 text-xs">
+            <span class="font-extrabold text-white">لوحة الإدارة المركزية (0% عمولة)</span>
+            <button onclick="lockAdminSession()" class="text-red-400 font-semibold text-[10px]">قفل 🔒</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5 text-center text-xs">
+            <div class="p-1.5 rounded-xl bg-indigoTheme-900/60 border border-white/5">
+              <span class="text-[9px] text-slate-400 block">الكباتن المعتمدين</span>
+              <span class="text-xs font-black text-white">42 كابتن</span>
+            </div>
+            <div class="p-1.5 rounded-xl bg-indigoTheme-900/60 border border-white/5">
+              <span class="text-[9px] text-slate-400 block">إيرادات الاشتراكات</span>
+              <span class="text-xs font-black text-emeraldAccent-400">14,700 ج.م</span>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <span class="text-[10px] font-bold text-white block">إدارة الكباتن وفترة السماح</span>
+            <div id="adminCaptainsList" class="space-y-1 max-h-28 overflow-y-auto no-scrollbar"></div>
+          </div>
+
+          <div class="p-2 bg-indigoTheme-900/40 rounded-xl border border-white/5 space-y-1.5">
+            <div class="grid grid-cols-3 gap-1 text-center">
+              <div>
+                <label class="block text-[8px] text-slate-400 mb-0.5">فتح العداد</label>
+                <input type="number" id="settingBaseFare" value="15.0" step="1" class="w-full bg-indigoTheme-950 p-1 rounded text-[10px] text-white text-center font-bold">
+              </div>
+              <div>
+                <label class="block text-[8px] text-slate-400 mb-0.5">لكل كم</label>
+                <input type="number" id="settingPerKm" value="4.5" step="0.5" class="w-full bg-indigoTheme-950 p-1 rounded text-[10px] text-white text-center font-bold">
+              </div>
+              <div>
+                <label class="block text-[8px] text-slate-400 mb-0.5">الحد الأدنى</label>
+                <input type="number" id="settingMinFare" value="25.0" step="1" class="w-full bg-indigoTheme-950 p-1 rounded text-[10px] text-white text-center font-bold">
+              </div>
+            </div>
+            <button onclick="savePricingSettings()" class="w-full py-1.5 bg-emeraldAccent-600 hover:bg-emeraldAccent-500 text-white text-[10px] font-bold rounded-xl active:scale-95 transition-all">
+              حفظ وتطبيق الأسعار
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- STICKY BOTTOM CONFIRMATION BUTTON (Only visible in Rider booking state) -->
+      <div id="stickyConfirmContainer" class="hidden px-3.5 pt-1.5 pb-3 border-t border-white/5 bg-indigoTheme-950/95 transition-all">
+        <button onclick="requestRide()" id="requestRideBtn" class="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-emeraldAccent-500 via-emeraldAccent-600 to-teal-700 hover:from-emeraldAccent-400 hover:to-emeraldAccent-500 text-white font-black text-xs shadow-glow-emerald flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+          <svg class="w-3.5 h-3.5 animate-spin hidden" id="requestSpinner" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          <span id="requestBtnText">تأكيد طلب الرحلة بالسعر الثابت (85.00 ج.م)</span>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ============================================== -->
+  <!-- 4. MODALS (ADMIN PIN, SUPABASE, RENEWAL, RATING) -->
+  <!-- ============================================== -->
+
+  <!-- Admin PIN Password Modal -->
+  <div id="adminPassModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-xs w-full p-4 rounded-3xl space-y-3 border border-white/10 shadow-2xl">
+      <div class="text-center space-y-1">
+        <span class="text-2xl">🛡️</span>
+        <h3 class="text-sm font-bold text-white">لوحة تحكم الإدارة</h3>
+        <p class="text-[11px] text-slate-400">أدخل كلمة المرور لتفعيل وتمديد اشتراكات الكباتن</p>
+      </div>
+      <input type="password" id="adminPinInput" placeholder="كلمة المرور: masarx2026" class="w-full bg-indigoTheme-950 p-2.5 rounded-xl border border-white/10 text-xs text-center text-white focus:outline-none focus:border-emeraldAccent-400" />
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="verifyAdminPin()" class="py-2 rounded-xl bg-emeraldAccent-600 text-white font-bold text-xs active:scale-95 transition-all">دخول</button>
+        <button onclick="closeAdminModal()" class="py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs active:scale-95 transition-all">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase Live Connection Config Modal -->
+  <div id="supabaseModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-sm w-full p-4 rounded-3xl space-y-3 border border-emeraldAccent-500/20 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <span class="text-emeraldAccent-400 font-bold text-xs">⚡ ربط قاعدة بيانات Supabase</span>
+        <button onclick="closeSupabaseModal()" class="text-slate-400 hover:text-white text-base">&times;</button>
+      </div>
+      <div class="space-y-2 text-xs">
+        <div>
+          <label class="block text-[9px] text-slate-400 mb-0.5">Project URL</label>
+          <input type="text" id="supabaseUrlInput" placeholder="https://your-project.supabase.co" class="w-full bg-indigoTheme-950 p-2 rounded-xl border border-white/10 text-white font-mono text-xs">
+        </div>
+        <div>
+          <label class="block text-[9px] text-slate-400 mb-0.5">Anon Public Key</label>
+          <input type="text" id="supabaseKeyInput" placeholder="eyJhbGciOi..." class="w-full bg-indigoTheme-950 p-2 rounded-xl border border-white/10 text-white font-mono text-xs">
+        </div>
+      </div>
+      <div class="flex items-center gap-2 pt-1">
+        <button onclick="saveSupabaseConfig()" class="flex-1 py-2 bg-emeraldAccent-600 text-white text-xs font-bold rounded-xl active:scale-95 transition-all">تفعيل الاتصال</button>
+        <button onclick="resetSupabaseToDemo()" class="py-2 px-2.5 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl">افتراضي</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Captain Subscription Renewal Modal -->
+  <div id="renewModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-xs w-full p-4 rounded-3xl space-y-3 border border-goldAccent-500/20 shadow-2xl">
+      <div class="text-center space-y-0.5">
+        <span class="text-xl">💳</span>
+        <h3 class="text-sm font-bold text-white">تجديد اشتراك الكابتن (0% عمولة)</h3>
+      </div>
+      <div class="space-y-1.5 text-xs">
+        <div onclick="selectPlan('daily')" class="p-2 rounded-xl border border-white/10 hover:border-emeraldAccent-400 bg-indigoTheme-900/50 cursor-pointer flex items-center justify-between">
+          <span>باقة اليوم الواحد التجريبية</span>
+          <span class="font-black text-emeraldAccent-400">25.00 ج.م</span>
+        </div>
+        <div onclick="selectPlan('monthly')" class="p-2 rounded-xl border-2 border-emeraldAccent-500 bg-emeraldAccent-500/10 cursor-pointer flex items-center justify-between shadow-glow-emerald">
+          <div>
+            <span class="font-bold text-white block">باقة الكابتن المحترف (شهرية)</span>
+            <span class="text-[9px] text-slate-300">+ 6 ساعات سماح ذكية مجاناً</span>
+          </div>
+          <span class="font-black text-emeraldAccent-400">350.00 ج.م</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="confirmPlanRenewal()" class="py-2 rounded-xl bg-goldAccent-500 text-indigoTheme-950 font-black text-xs active:scale-95 transition-all">تأكيد التجديد</button>
+        <button onclick="closeRenewModal()" class="py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rating & Favorite Driver Modal -->
+  <div id="ratingModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-xs w-full p-4 rounded-3xl space-y-3 border border-white/10 shadow-2xl text-center">
+      <span class="text-2xl">🎉</span>
+      <h3 class="text-sm font-bold text-white">وصلت وجهتك بسلام!</h3>
+      <div class="flex items-center justify-center gap-2 py-1">
+        <button onclick="setRating(1)" class="text-xl text-goldAccent-400 star-btn">★</button>
+        <button onclick="setRating(2)" class="text-xl text-goldAccent-400 star-btn">★</button>
+        <button onclick="setRating(3)" class="text-xl text-goldAccent-400 star-btn">★</button>
+        <button onclick="setRating(4)" class="text-xl text-goldAccent-400 star-btn">★</button>
+        <button onclick="setRating(5)" class="text-xl text-goldAccent-400 star-btn">★</button>
+      </div>
+      <div class="p-2 bg-indigoTheme-900/60 rounded-xl border border-white/5 flex items-center justify-between text-right text-xs">
+        <span class="text-[11px] font-bold text-white">حفظ الكابتن في قائمتك المفضلة ⭐</span>
+        <input type="checkbox" id="addFavoriteCaptainCheck" checked class="w-4 h-4 rounded text-emeraldAccent-600 bg-indigoTheme-950">
+      </div>
+      <button onclick="submitReviewAndReset()" class="w-full py-2 bg-emeraldAccent-600 text-white font-extrabold text-xs rounded-xl active:scale-95 transition-all">
+        تأكيد التقييم والمتابعة
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- 5. CENTER MAP PIN PICKER OVERLAY (بالخريطة 📍) -->
+  <!-- ============================================== -->
+  <div id="centerPinContainer" class="hidden pointer-events-none fixed inset-0 z-30 flex items-center justify-center">
+    <div class="relative -translate-y-1/2 flex flex-col items-center">
+      <!-- Floating Address Speech Bubble (Updates Live via Photon Reverse API) -->
+      <div id="centerPinAddressBubble" class="pointer-events-auto mb-2 px-3 py-1.5 rounded-xl glass-elevated border border-emeraldAccent-400/50 shadow-2xl max-w-xs text-center flex items-center gap-1.5 backdrop-blur-xl">
+        <span class="w-2 h-2 rounded-full bg-emeraldAccent-400 animate-ping shrink-0"></span>
+        <span id="centerPinAddressText" class="text-[11px] font-bold text-white truncate">حرك الخريطة لاختيار الموقع بدقة...</span>
+      </div>
+      <!-- Center Pin SVG Icon -->
+      <div class="w-11 h-11 text-emeraldAccent-400 drop-shadow-[0_10px_20px_rgba(16,185,129,0.7)] animate-bounce">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      </div>
+      <!-- Pin Shadow Point -->
+      <div class="w-4 h-1.5 rounded-full bg-black/50 blur-[2px] mt-0.5"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Floating Confirmation Bar for Center Pin -->
+  <div id="pinConfirmBar" class="hidden fixed bottom-6 inset-x-4 z-40 max-w-md mx-auto flex items-center gap-2">
+    <button onclick="confirmPinSelection()" id="confirmPinBtn" class="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-emeraldAccent-500 to-emeraldAccent-600 hover:from-emeraldAccent-400 hover:to-emeraldAccent-500 text-white font-black text-xs shadow-glow-emerald flex items-center justify-center gap-2 active:scale-95 transition-all">
+      <span>✓</span>
+      <span id="confirmPinBtnText">تأكيد هذا الموقع (الانطلاق)</span>
+    </button>
+    <button onclick="cancelPinSelection()" class="py-3 px-4 rounded-2xl glass-card text-slate-300 hover:text-white font-bold text-xs border border-white/10 active:scale-95 transition-all">
+      إلغاء ✕
+    </button>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- 6. PHOTON API FAST SEARCH OVERLAY MODAL (z-index: 9999) -->
+  <!-- ============================================== -->
+  <div id="searchOverlayModal" class="fixed inset-0 z-[9999] bg-indigoTheme-950/95 backdrop-blur-xl hidden flex flex-col p-4">
+    <!-- Header with Back & Title -->
+    <div class="flex items-center justify-between pb-3 border-b border-white/10">
+      <div class="flex items-center gap-2">
+        <button onclick="closeSearchOverlay()" class="w-8 h-8 rounded-xl bg-indigoTheme-900 border border-white/10 text-slate-300 hover:text-white flex items-center justify-center text-sm font-bold active:scale-95 transition-transform">
+          ←
+        </button>
+        <div>
+          <h3 id="searchModalTitle" class="text-sm font-black text-white">بحث عن موقع الانطلاق</h3>
+          <span class="text-[10px] text-emeraldAccent-400">محرك بحث فوري مجاني (Photon / OSM)</span>
+        </div>
+      </div>
+      <button onclick="closeSearchOverlay()" class="text-slate-400 hover:text-white text-lg font-bold p-1">&times;</button>
+    </div>
+
+    <!-- Search Input & Action Button -->
+    <div class="pt-3 pb-2 flex items-center gap-2">
+      <div class="relative flex-1">
+        <input type="text" id="searchInputField" placeholder="اكتب اسم الشارع، المعلم، أو الحي..." class="w-full bg-indigoTheme-900/90 text-white text-xs font-semibold py-2.5 px-9 rounded-2xl border border-emeraldAccent-500/40 focus:outline-none focus:border-emeraldAccent-400 shadow-inner" autocomplete="off" />
+        <span class="absolute right-3 top-2.5 text-slate-400 text-xs">🔍</span>
+        <button onclick="clearSearchInput()" id="clearSearchBtn" class="hidden absolute left-3 top-2.5 text-slate-400 hover:text-white text-xs font-bold">✕</button>
+      </div>
+      <button onclick="triggerImmediateSearch()" class="py-2.5 px-4 rounded-2xl bg-emeraldAccent-600 hover:bg-emeraldAccent-500 text-white font-bold text-xs active:scale-95 transition-all flex items-center gap-1 shadow-glow-emerald">
+        <span>بحث</span>
+        <span>🔍</span>
+      </button>
+    </div>
+
+    <!-- Search Status / Loader -->
+    <div id="searchLoadingState" class="hidden py-2 flex items-center justify-center gap-2 text-xs text-emeraldAccent-400">
+      <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+      <span>جاري البحث عبر خريطة الشوارع...</span>
+    </div>
+
+    <!-- Live Results List (Direct OpenStreetMap / Nominatim Real-Time Results) -->
+    <div class="flex-1 overflow-y-auto no-scrollbar space-y-1.5 pt-2" id="searchResultsList">
+      <div class="text-center py-10 text-slate-400 text-xs space-y-2">
+        <span class="text-3xl block">🗺️</span>
+        <span class="font-bold text-white block">ابحث في أي شارع، حي، أو معلم حقيقي</span>
+        <span class="text-[10px] text-slate-400 block">اكتب للبحث المباشر عبر قاعدة بيانات خريطة OpenStreetMap الحية</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPS Permission Blocked Modal -->
+  <div id="gpsBlockedModal" class="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-sm w-full p-4 rounded-3xl space-y-3 border border-goldAccent-500/30 shadow-2xl text-center">
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-goldAccent-500/20 text-goldAccent-400 flex items-center justify-center text-2xl">
+        🛰️
+      </div>
+      <h3 class="text-sm font-extrabold text-white">إذن الموقع (GPS) محظور بالمتصفح</h3>
+      <p id="gpsBlockedMessage" class="text-xs text-slate-300 leading-relaxed text-right bg-indigoTheme-950/70 p-3 rounded-2xl border border-white/5">
+        لم يتمكن التطبيق من قراءة موقع هاتفك الفعلي لأن المتصفح أو إطار المعاينة يحظر صلاحية الموقع.
+      </p>
+      <div class="text-[11px] text-emeraldAccent-300 bg-emeraldAccent-500/10 p-2.5 rounded-xl border border-emeraldAccent-500/20 text-right space-y-1">
+        <strong class="block text-white">الحلول المقترحة:</strong>
+        <div>1. اضغط على أيقونة القفل 🔒 أو إعدادات الموقع في المتصفح وفعّل "السماح بالوصول للموقع".</div>
+        <div>2. أو اضغط على <strong>"تحديد بالخريطة 📍"</strong> لاختيار موقعك بدقة 100% بلمسة واحدة.</div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="startCenterPinPicker('pickup'); closeGpsBlockedModal();" class="py-2.5 rounded-xl bg-emeraldAccent-600 hover:bg-emeraldAccent-500 text-white font-bold text-xs active:scale-95 transition-all">
+          📍 تحديد بالخريطة
+        </button>
+        <button onclick="closeGpsBlockedModal()" class="py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">
+          إغلاق ✕
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-14 left-3 z-50 flex flex-col gap-1.5 pointer-events-none"></div>
+
+  <!-- Application Logic -->
+  <script src="/app.js"></script>
+</body>
+</html>

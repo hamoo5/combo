@@ -1,0 +1,6 @@
+{
+  "name": "Wasla Rideshare",
+  "description": "تطبيق مشاوير حقيقي على غرار إن درايف بالأجرة النقدية، تفاوض الأسعار، وتوثيق أوراق ورخص الكباتن مع أول رحلة مجاناً بدون عمولة",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
